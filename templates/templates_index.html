@@ -1,0 +1,159 @@
+<script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+        return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                    row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                    headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+    }
+</script>
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Modbus Gateway Configuration</title>
+    <style>
+        table,
+        th,
+        td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 8px;
+        }
+
+        form {
+            margin: 20px 0;
+        }
+
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 400px;
+        }
+
+        .form-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group label {
+            width: 120px;
+            /* Chiều rộng cố định cho nhãn */
+            text-align: right;
+        }
+
+        .form-group input[type="number"] {
+            width: 150px;
+            /* Chiều rộng cố định cho ô nhập */
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .form-group input[type="submit"] {
+            width: 100px;
+            padding: 8px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .form-group input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        .delete-btn {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .delete-btn:hover {
+            background-color: #cc0000;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Modbus Mapping Configuration</h1>
+    <form action="/add_mapping" method="post" class="form-container">
+        <div class="form-group">
+            <label for="tcp_address">TCP Address:</label>
+            <input type="number" name="tcp_address" id="tcp_address" required>
+        </div>
+        <div class="form-group">
+            <label for="rtu_id">RTU ID:</label>
+            <input type="number" name="rtu_id" id="rtu_id" min="1" max="20" required>
+        </div>
+        <div class="form-group">
+            <label for="rtu_address">RTU Address:</label>
+            <input type="number" name="rtu_address" id="rtu_address" required>
+        </div>
+        <div class="form-group">
+            <label></label> <!-- Ô trống để căn chỉnh -->
+            <input type="submit" value="Add Mapping">
+        </div>
+    </form>
+    <h2>Current Mappings</h2>
+    <table>
+        <tr>
+            <th>TCP Address</th>
+            <th>RTU ID</th>
+            <th>RTU Address</th>
+            <th>Action</th>
+        </tr>
+        {% for mapping in mappings %}
+        <tr>
+            <td>{{ mapping[0] }}</td>
+            <td>{{ mapping[1] }}</td>
+            <td>{{ mapping[2] }}</td>
+            <td>
+                <form action="/delete_mapping/{{ mapping[0] }}" method="post">
+                    <input type="submit" value="Delete" class="delete-btn"
+                        onclick="return confirm('Are you sure you want to delete this mapping?');">
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+
+</html>
