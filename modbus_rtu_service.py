@@ -15,7 +15,7 @@ async def handle_rtu_request(request_data, client_rtu):
     count         = request_data["count"]
     values        = request_data["values"]
     
-    print(f"Receive packet from TCP server after mapping < function_code: {function_code}, rtu_id: {rtu_id}, rtu_address: {rtu_address} , count: {count}, values: {values} >")
+    # print(f"Receive packet from TCP server after mapping < function_code: {function_code}, rtu_id: {rtu_id}, rtu_address: {rtu_address} , count: {count}, values: {values} >")
     
     try:
         if function_code in [3, 4]:  
